@@ -72,15 +72,6 @@ def gen_standard(data_sampler, n_points, b_size):
 
 ### QUERY LEVEL SHIFTS
 
-def gen_opposite_quadrants(data_sampler, n_points, b_size):
-    xs = data_sampler.sample_xs(n_points, b_size)
-    pattern = torch.randn([b_size, 1, xs.shape[2]]).sign()
-
-    xs_train_pre = xs.abs() * pattern
-    xs_test_post = -xs_train_pre
-
-    return xs_train_pre, xs_test_post
-
 def gen_scaled_query(data_sampler, n_points, b_size, scale=2.0):
     xs = data_sampler.sample_xs(n_points, b_size)
 
@@ -89,26 +80,60 @@ def gen_scaled_query(data_sampler, n_points, b_size, scale=2.0):
 
     return xs_train_pre, xs_test_post
 
-def gen_random_quadrants(data_sampler, n_points, b_size):
+
+def gen_opposite_quadrants(data_sampler, n_points, b_size, num_flipped_dims=0):
     xs = data_sampler.sample_xs(n_points, b_size)
-    pattern = torch.randn([b_size, 1, xs.shape[2]]).sign()
+    n_dims = xs.shape[2]
+    pattern = torch.randn([b_size, 1, n_dims]).sign()
 
     xs_train_pre = xs.abs() * pattern
+    xs_test_post = xs
+
+    for i in range(b_size):
+        flipped_dims = torch.randperm(n_dims)[:num_flipped_dims] # TODO: make sure this works
+        xs_test_post[i, :, flipped_dims] *= -1
+
+    return xs_train_pre, xs_test_post
+
+
+def gen_random_quadrants(data_sampler, n_points, b_size, num_unconstrained_points=0):
+    xs = data_sampler.sample_xs(n_points, b_size)
+    n_dims = xs.shape[2]
+    pattern = torch.randn([b_size, 1, n_dims]).sign()
+
+    xs_train_pre = xs.clone()
+
+    num_constrained_points = n_points - num_unconstrained_points
+    
+    if num_constrained_points > 0:
+        for i in range(b_size):
+            constrained_point_indices = torch.randperm(n_points)[:num_constrained_points]
+            
+            xs_train_pre[i, constrained_point_indices, :] = xs[i, constrained_point_indices, :].abs() * pattern[i, :, :]
+
     xs_test_post = xs
 
     return xs_train_pre, xs_test_post
 
 
-def gen_orthogonal_train_test(data_sampler, n_points, b_size):
+def gen_orthogonal_train_test(data_sampler, n_points, b_size, num_orthogonal_vectors=0):
     xs = data_sampler.sample_xs(n_points, b_size)
     n_dim = xs.shape[2]
     n_points = min(n_points, n_dim)
-    # raise ValueError("number of points should be at most the dimension.")
     xs_train_pre = xs
-    xs_test_post = torch.zeros(xs.shape)
+    xs_test_post = xs.clone()
+    
+    if num_orthogonal_vectors == 0:
+        return xs_train_pre, xs_test_post
+    
+    num_orthogonal_vectors = min(num_orthogonal_vectors, n_points)
+    
     for i in range(n_points):
         xs_test_post_i = xs[:, i : i + 1, :]
-        xs_train_pre_i = xs[:, :i, :]
+        
+        random_indices = torch.randperm(i)[:num_orthogonal_vectors]
+        xs_train_pre_i = xs[:, random_indices, :]
+        
         _, _, Vt = torch.linalg.svd(xs_train_pre_i, full_matrices=False)
         xs_train_pre_i_projection = Vt.transpose(1, 2) @ Vt
         xs_test_post_i_orthogonalized = (
@@ -125,7 +150,7 @@ def gen_orthogonal_train_test(data_sampler, n_points, b_size):
     return xs_train_pre, xs_test_post
 
 
-def gen_overlapping_train_test(data_sampler, n_points, b_size):
+def gen_overlapping_train_test(data_sampler, n_points, b_size): # TODO: This may not be a good shift
     xs = data_sampler.sample_xs(n_points, b_size)
     xs_train_pre = xs
     xs_test_post = xs.clone()
