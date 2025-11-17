@@ -6,7 +6,6 @@ import torch
 def squared_error(ys_pred, ys):
     return (ys - ys_pred).square()
 
-
 def mean_squared_error(ys_pred, ys):
     return (ys - ys_pred).square().mean()
 
