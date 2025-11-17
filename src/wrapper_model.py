@@ -28,6 +28,7 @@ def build_model(conf):
             n_embd=conf.n_embd,
             n_layer=conf.n_layer,
             n_head=conf.n_head,
+            attention_type=conf.model.attention_type,
         )
     else:
         raise NotImplementedError
@@ -36,9 +37,9 @@ def build_model(conf):
 
 
 class NanoGPTTransformerModel(nn.Module):
-    def __init__(self, n_dims, n_positions, n_embd=128, n_layer=12, n_head=4):
+    def __init__(self, n_dims, n_positions, n_embd=128, n_layer=12, n_head=4, attention_type="softmax_causal"):
         super(NanoGPTTransformerModel, self).__init__()
-        self.name = f"nanogpt_embd={n_embd}_layer={n_layer}_head={n_head}"
+        self.name = f"nanogpt_embd={n_embd}_layer={n_layer}_head={n_head}_attn={attention_type}"
         self.n_dims = n_dims
         self.n_positions = n_positions
 
@@ -50,6 +51,7 @@ class NanoGPTTransformerModel(nn.Module):
             n_embd=n_embd,
             dropout=0.0,
             bias=True,
+            attention_type=attention_type,
         )
 
         self._read_in = nn.Linear(n_dims, n_embd)
