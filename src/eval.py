@@ -70,6 +70,7 @@ def gen_standard(data_sampler, n_points, b_size):
 
     return xs, None
 
+### QUERY LEVEL SHIFTS
 
 def gen_opposite_quadrants(data_sampler, n_points, b_size):
     xs = data_sampler.sample_xs(n_points, b_size)
@@ -80,6 +81,13 @@ def gen_opposite_quadrants(data_sampler, n_points, b_size):
 
     return xs_train_pre, xs_test_post
 
+def gen_scaled_query(data_sampler, n_points, b_size, scale=2.0):
+    xs = data_sampler.sample_xs(n_points, b_size)
+
+    xs_train_pre = xs
+    xs_test_post = xs * scale
+
+    return xs_train_pre, xs_test_post
 
 def gen_random_quadrants(data_sampler, n_points, b_size):
     xs = data_sampler.sample_xs(n_points, b_size)
@@ -131,6 +139,17 @@ def gen_overlapping_train_test(data_sampler, n_points, b_size):
     return xs_train_pre, xs_test_post
 
 
+
+
+
+
+
+
+
+
+
+
+
 def aggregate_metrics(metrics, bootstrap_trials=1000):
     """
     Takes as input a tensor of shape (num_eval, n_points) and returns a dict with
@@ -179,7 +198,10 @@ def eval_model(
 
     generating_func = globals()[f"gen_{prompting_strategy}"]
     for i in range(num_eval_examples // batch_size):
-        xs, xs_p = generating_func(data_sampler, n_points, batch_size)
+        if prompting_strategy == "scaled_query":
+            xs, xs_p = generating_func(data_sampler, n_points, batch_size, scale=2.0) # TODO: add list of scales
+        else:
+            xs, xs_p = generating_func(data_sampler, n_points, batch_size)
 
         metrics = eval_batch(model, task_sampler, xs, xs_p)
         all_metrics.append(metrics)
@@ -222,6 +244,7 @@ def build_evals(conf):
         "random_quadrants",
         "orthogonal_train_test",
         "overlapping_train_test",
+        "scaled_query",
     ]:
         evaluation_kwargs[strategy] = {"prompting_strategy": strategy}
 
