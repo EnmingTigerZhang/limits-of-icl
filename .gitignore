@@ -1,2 +1,5 @@
 # MAC Files
 .DS_Store
+
+# Jupyter Notebooks for testing
+task_test.ipynb

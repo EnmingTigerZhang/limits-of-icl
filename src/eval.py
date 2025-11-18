@@ -273,6 +273,13 @@ def build_evals(conf):
     ]:
         evaluation_kwargs[strategy] = {"prompting_strategy": strategy}
 
+    # TODO: do something like below to test different params
+    # for scale_val in [0.5, 2.0, 5.0]:
+    #     evaluation_kwargs[f"scaled_query_scale={scale_val}"] = {
+    #         "prompting_strategy": "scaled_query",
+    #         "prompting_strategy_kwargs": {"scale": scale_val},
+    #     }
+
     for method in ["half_subspace", "skewed"]:
         if "subspace" in method:
             eigenvals = torch.zeros(n_dims)
@@ -314,6 +321,10 @@ def build_evals(conf):
             "task_sampler_kwargs": {"sparsity": sparsity_val},
             "task_name": "sparse_linear_regression",
         }
+
+    evaluation_kwargs["uniform_w_dist"] = {
+        "task_name": "uniform_linear_regression",
+    }
 
     for name, kwargs in evaluation_kwargs.items():
         # allow kwargs to override base_kwargs values

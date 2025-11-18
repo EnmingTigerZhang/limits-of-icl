@@ -53,6 +53,7 @@ def get_task_sampler(
 ):
     task_names_to_classes = {
         "linear_regression": LinearRegression,
+        "uniform_linear_regression": UniformLinearRegression,
         "sparse_linear_regression": SparseLinearRegression,
         "linear_classification": LinearClassification,
         "noisy_linear_regression": NoisyLinearRegression,
@@ -109,6 +110,29 @@ class LinearRegression(Task):
     @staticmethod
     def get_training_metric():
         return mean_squared_error
+
+
+class UniformLinearRegression(LinearRegression):
+    def __init__(self, n_dims, batch_size, pool_dict=None, seeds=None, scale=1):
+        super(LinearRegression, self).__init__(n_dims, batch_size, pool_dict, seeds)
+        self.scale = scale
+
+        bound = math.sqrt(3.0)
+
+        if pool_dict is None and seeds is None:
+            self.w_b = (torch.rand(self.b_size, self.n_dims, 1) * 2 * bound) - bound
+        elif seeds is not None:
+            self.w_b = torch.zeros(self.b_size, self.n_dims, 1)
+            generator = torch.Generator()
+            assert len(seeds) == self.b_size
+            for i, seed in enumerate(seeds):
+                generator.manual_seed(seed)
+                rand_vals = torch.rand(self.n_dims, 1, generator=generator)
+                self.w_b[i] = (rand_vals * 2 * bound) - bound
+        else:
+            assert "w" in pool_dict
+            indices = torch.randperm(len(pool_dict["w"]))[:batch_size]
+            self.w_b = pool_dict["w"][indices]
 
 
 class SparseLinearRegression(LinearRegression):
