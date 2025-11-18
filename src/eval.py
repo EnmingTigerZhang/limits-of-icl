@@ -53,17 +53,23 @@ def eval_batch(model, task_sampler, xs, xs_p=None):
         device = "cpu"
 
     if xs_p is None:
+        print("did it go here?")
         ys = task.evaluate(xs)
         pred = model(xs.to(device), ys.to(device)).detach()
         metrics = task.get_metric()(pred.cpu(), ys)
     else:
+        print("step -1")
         b_size, n_points, _ = xs.shape
         metrics = torch.zeros(b_size, n_points)
+        print("before loop", n_points)
         for i in range(n_points):
+            print("step", i)
             xs_comb = torch.cat((xs[:, :i, :], xs_p[:, i:, :]), dim=1)
+            print("about to evaluate")
             ys = task.evaluate(xs_comb)
-
+            print("sending to model")
             pred = model(xs_comb.to(device), ys.to(device), inds=[i]).detach()
+            print("model is done")
             metrics[:, i] = task.get_metric()(pred.cpu(), ys)[:, i]
 
     return metrics
@@ -251,17 +257,21 @@ def eval_model(
 
     assert num_eval_examples % batch_size == 0
     data_sampler = get_data_sampler(data_name, n_dims, **data_sampler_kwargs)
+    print("finished data sampler!")
     task_sampler = get_task_sampler(
         task_name, n_dims, batch_size, **task_sampler_kwargs
     )
+    print("made it here?")
 
     all_metrics = []
 
     generating_func = globals()[f"gen_{prompting_strategy}"]
+    print(num_eval_examples // batch_size)
     for i in range(num_eval_examples // batch_size):
         xs, xs_p = generating_func(data_sampler, n_points, batch_size, **prompting_strategy_kwargs)
-
+        print("before eval batch")
         metrics = eval_batch(model, task_sampler, xs, xs_p)
+        print("after eval batch")
         all_metrics.append(metrics)
 
     metrics = torch.cat(all_metrics, dim=0)
@@ -384,14 +394,23 @@ def compute_evals(all_models, evaluation_kwargs, save_path=None, recompute=False
     except Exception:
         all_metrics = {}
 
+    i = 0
     for eval_name, kwargs in tqdm(evaluation_kwargs.items()):
+        i += 1
+        if i <= 14:
+            continue
+        # if i >= 16:
+        #     continue
+        print(f"Evaluating {eval_name}", i)
+
         metrics = {}
         if eval_name in all_metrics and not recompute:
             metrics = all_metrics[eval_name]
         for model in all_models:
-            if model.name in metrics and not recompute:
-                continue
-
+            print("Evaluating model:", model.name, recompute)
+            # if model.name in metrics and not recompute:
+            #     continue
+            print("Evaluating now")
             metrics[model.name] = eval_model(model, **kwargs)
         all_metrics[eval_name] = metrics
 
