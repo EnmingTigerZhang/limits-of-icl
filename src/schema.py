@@ -14,7 +14,9 @@ from funcy import merge
 
 
 model_schema = {
-    "family": merge(tstring, allowed(["gpt2", "lstm"])),
+    "family": merge(tstring, allowed(["gpt2", "lstm", "nanogpt"])),
+    "attention_type": merge(tstring, default("softmax_causal")),
+    "attention_kwargs": merge(tdict, default({})),
     "n_positions": merge(tinteger, required),  # maximum context length
     "n_dims": merge(tinteger, required),  # latent dimension
     "n_embd": merge(tinteger, required),
