@@ -9,7 +9,7 @@ from tqdm import tqdm
 import torch
 import yaml
 
-import models
+import wrapper_model as models
 from samplers import get_data_sampler, sample_transformation
 from tasks import get_task_sampler
 
