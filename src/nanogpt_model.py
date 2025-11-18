@@ -26,13 +26,13 @@ class LayerNorm(nn.Module):
     def forward(self, input):
         return F.layer_norm(input, self.weight.shape, self.weight, self.bias, 1e-5)
 
-from attentions import SoftmaxCausalSelfAttention
+from attentions import SoftmaxCausalSelfAttention, LocalGlobalCausalSelfAttention
 
 # A mapping from string names to the attention classes.
 # This makes it easy to add new attention mechanisms.
 ATTENTION_CLASSES = {
     'softmax_causal': SoftmaxCausalSelfAttention,
-    # 'additive': AdditiveAttention, # Example for when you add more
+    'local_global': LocalGlobalCausalSelfAttention
 }
 
 class MLP(nn.Module):
@@ -59,7 +59,8 @@ class Block(nn.Module):
         
         # Factory pattern: Instantiate the correct attention class based on the config.
         if config.attention_type in ATTENTION_CLASSES:
-            self.attn = ATTENTION_CLASSES[config.attention_type](config)
+            # Pass the attention_kwargs to the constructor of the attention class.
+            self.attn = ATTENTION_CLASSES[config.attention_type](config, **(config.attention_kwargs or {}))
         else:
             raise ValueError(f"Unknown attention type: {config.attention_type}")
             
@@ -81,6 +82,7 @@ class GPTConfig:
     dropout: float = 0.0
     bias: bool = True # True: bias in Linears and LayerNorms, like GPT-2. False: a bit better and faster
     attention_type: str = 'softmax_causal' # The type of attention to use.
+    attention_kwargs: dict = None # kwargs for the attention class.
 
 class GPT(nn.Module):
 
