@@ -4,3 +4,6 @@ __pycache__
 
 # Jupyter Notebooks for testing
 task_test.ipynb
+
+# Model files and training artifacts
+models/

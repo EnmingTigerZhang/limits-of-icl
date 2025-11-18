@@ -16,6 +16,7 @@ from tasks import get_task_sampler
 
 def get_model_from_run(run_path, step=-1, only_conf=False):
     config_path = os.path.join(run_path, "config.yaml")
+    print(config_path)
     with open(config_path) as fp:  # we don't Quinfig it to avoid inherits
         conf = Munch.fromDict(yaml.safe_load(fp))
     if only_conf:
@@ -25,11 +26,17 @@ def get_model_from_run(run_path, step=-1, only_conf=False):
 
     if step == -1:
         state_path = os.path.join(run_path, "state.pt")
-        state = torch.load(state_path)
+        if torch.cuda.is_available():
+            state = torch.load(state_path)
+        else:
+            state = torch.load(state_path, map_location=torch.device('cpu'))
         model.load_state_dict(state["model_state_dict"])
     else:
         model_path = os.path.join(run_path, f"model_{step}.pt")
-        state_dict = torch.load(model_path)
+        if torch.cuda.is_available():
+            state_dict = torch.load(model_path)
+        else:
+            state_dict = torch.load(model_path, map_location=torch.device('cpu'))
         model.load_state_dict(state_dict)
 
     return model, conf
@@ -403,11 +410,15 @@ def get_run_metrics(
         all_models = []
     else:
         model, conf = get_model_from_run(run_path, step)
-        model = model.cuda().eval()
+        if torch.cuda.is_available():
+            model = model.cuda().eval()
+        else:
+            model = model.eval()
         all_models = [model]
-        if not skip_baselines:
-            all_models += models.get_relevant_baselines(conf.training.task)
+        # if not skip_baselines:
+        #     all_models += models.get_relevant_baselines(conf.training.task)
     evaluation_kwargs = build_evals(conf)
+    print(evaluation_kwargs)
 
     if not cache:
         save_path = None
@@ -424,6 +435,7 @@ def get_run_metrics(
             recompute = True
 
     all_metrics = compute_evals(all_models, evaluation_kwargs, save_path, recompute)
+    print(all_metrics)
     return all_metrics
 
 

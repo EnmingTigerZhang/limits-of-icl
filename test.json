@@ -1,0 +1,359 @@
+{
+  "standard": {
+    "task_name": "linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "standard"
+  },
+  "scaled_query_scale=0.5": {
+    "task_name": "linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "scaled_query",
+    "prompting_strategy_kwargs": {
+      "scale": 0.5
+    }
+  },
+  "scaled_query_scale=2.0": {
+    "task_name": "linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "scaled_query",
+    "prompting_strategy_kwargs": {
+      "scale": 2.0
+    }
+  },
+  "scaled_query_scale=5.0": {
+    "task_name": "linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "scaled_query",
+    "prompting_strategy_kwargs": {
+      "scale": 5.0
+    }
+  },
+  "opposite_quadrants_num_flipped=1": {
+    "task_name": "linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "opposite_quadrants",
+    "prompting_strategy_kwargs": {
+      "num_flipped_dims": 1
+    }
+  },
+  "opposite_quadrants_num_flipped=3": {
+    "task_name": "linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "opposite_quadrants",
+    "prompting_strategy_kwargs": {
+      "num_flipped_dims": 3
+    }
+  },
+  "opposite_quadrants_num_flipped=5": {
+    "task_name": "linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "opposite_quadrants",
+    "prompting_strategy_kwargs": {
+      "num_flipped_dims": 5
+    }
+  },
+  "random_quadrants_num_unconstrained=0": {
+    "task_name": "linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "random_quadrants",
+    "prompting_strategy_kwargs": {
+      "num_unconstrained_points": 0
+    }
+  },
+  "random_quadrants_num_unconstrained=3": {
+    "task_name": "linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "random_quadrants",
+    "prompting_strategy_kwargs": {
+      "num_unconstrained_points": 3
+    }
+  },
+  "random_quadrants_num_unconstrained=5": {
+    "task_name": "linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "random_quadrants",
+    "prompting_strategy_kwargs": {
+      "num_unconstrained_points": 5
+    }
+  },
+  "orthogonal_train_test_num_orthogonal=1": {
+    "task_name": "linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "orthogonal_train_test",
+    "prompting_strategy_kwargs": {
+      "num_orthogonal_vectors": 1
+    }
+  },
+  "orthogonal_train_test_num_orthogonal=3": {
+    "task_name": "linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "orthogonal_train_test",
+    "prompting_strategy_kwargs": {
+      "num_orthogonal_vectors": 3
+    }
+  },
+  "orthogonal_train_test_num_orthogonal=5": {
+    "task_name": "linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "orthogonal_train_test",
+    "prompting_strategy_kwargs": {
+      "num_orthogonal_vectors": 5
+    }
+  },
+  "overlapping_train_test": {
+    "task_name": "linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "overlapping_train_test"
+  },
+  "subspace_frac=0.2": {
+    "task_name": "linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "subspace",
+    "prompting_strategy_kwargs": {
+      "frac": 0.2
+    }
+  },
+  "subspace_frac=0.5": {
+    "task_name": "linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "subspace",
+    "prompting_strategy_kwargs": {
+      "frac": 0.5
+    }
+  },
+  "subspace_frac=0.8": {
+    "task_name": "linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "subspace",
+    "prompting_strategy_kwargs": {
+      "frac": 0.8
+    }
+  },
+  "skewed_exponent=0.5": {
+    "task_name": "linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "skewed",
+    "prompting_strategy_kwargs": {
+      "exponent": 0.5
+    }
+  },
+  "skewed_exponent=1.0": {
+    "task_name": "linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "skewed",
+    "prompting_strategy_kwargs": {
+      "exponent": 1.0
+    }
+  },
+  "skewed_exponent=2.0": {
+    "task_name": "linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "skewed",
+    "prompting_strategy_kwargs": {
+      "exponent": 2.0
+    }
+  },
+  "scale_x_scale=0.5": {
+    "task_name": "linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "scale_x",
+    "prompting_strategy_kwargs": {
+      "scale": 0.5
+    }
+  },
+  "scale_x_scale=2.0": {
+    "task_name": "linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "scale_x",
+    "prompting_strategy_kwargs": {
+      "scale": 2.0
+    }
+  },
+  "scale_x_scale=5.0": {
+    "task_name": "linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "scale_x",
+    "prompting_strategy_kwargs": {
+      "scale": 5.0
+    }
+  },
+  "noisyLR_std=0.5": {
+    "task_name": "noisy_linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "standard",
+    "task_sampler_kwargs": {
+      "renormalize_ys": true,
+      "noise_std": 0.5
+    }
+  },
+  "noisyLR_std=1.0": {
+    "task_name": "noisy_linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "standard",
+    "task_sampler_kwargs": {
+      "renormalize_ys": true,
+      "noise_std": 1.0
+    }
+  },
+  "noisyLR_std=2.0": {
+    "task_name": "noisy_linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "standard",
+    "task_sampler_kwargs": {
+      "renormalize_ys": true,
+      "noise_std": 2.0
+    }
+  },
+  "affineLR_std=0.5": {
+    "task_name": "affine_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "standard",
+    "task_sampler_kwargs": {
+      "bias_std": 0.5
+    }
+  },
+  "affineLR_std=1.0": {
+    "task_name": "affine_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "standard",
+    "task_sampler_kwargs": {
+      "bias_std": 1.0
+    }
+  },
+  "affineLR_std=2.0": {
+    "task_name": "affine_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "standard",
+    "task_sampler_kwargs": {
+      "bias_std": 2.0
+    }
+  },
+  "sparseLR_k=3": {
+    "task_name": "sparse_linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "standard",
+    "task_sampler_kwargs": {
+      "sparsity": 3
+    }
+  },
+  "sparseLR_k=5": {
+    "task_name": "sparse_linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "standard",
+    "task_sampler_kwargs": {
+      "sparsity": 5
+    }
+  },
+  "sparseLR_k=10": {
+    "task_name": "sparse_linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "standard",
+    "task_sampler_kwargs": {
+      "sparsity": 10
+    }
+  },
+  "uniform_w_dist": {
+    "task_name": "uniform_linear_regression",
+    "n_dims": 20,
+    "n_points": 41,
+    "batch_size": 64,
+    "data_name": "gaussian",
+    "prompting_strategy": "standard"
+  }
+}
