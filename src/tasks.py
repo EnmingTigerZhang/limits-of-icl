@@ -59,6 +59,7 @@ def get_task_sampler(
         "quadratic_regression": QuadraticRegression,
         "relu_2nn_regression": Relu2nnRegression,
         "decision_tree": DecisionTree,
+        "affine_regression": AffineRegression,
     }
     if task_name in task_names_to_classes:
         task_cls = task_names_to_classes[task_name]
@@ -146,14 +147,6 @@ class SparseLinearRegression(LinearRegression):
         ys_b = self.scale * (xs_b @ w_b)[:, :, 0]
         return ys_b
 
-    @staticmethod
-    def get_metric():
-        return squared_error
-
-    @staticmethod
-    def get_training_metric():
-        return mean_squared_error
-
 
 class LinearClassification(LinearRegression):
     def evaluate(self, xs_b):
@@ -167,6 +160,38 @@ class LinearClassification(LinearRegression):
     @staticmethod
     def get_training_metric():
         return cross_entropy
+
+
+class AffineRegression(LinearRegression):
+    def __init__(
+        self,
+        n_dims,
+        batch_size,
+        pool_dict=None,
+        seeds=None,
+        scale=1,
+        bias_std=1.0,
+    ):
+        """bias_std: standard deviation of bias added to the prediction."""
+        super(AffineRegression, self).__init__(
+            n_dims, batch_size, pool_dict, seeds, scale
+        )
+        self.bias_std = bias_std
+        if seeds is None:
+            self.b = torch.randn(self.b_size, 1) * self.bias_std
+        else:
+            self.b = torch.zeros(self.b_size, 1)
+            generator = torch.Generator()
+            assert len(seeds) == self.b_size
+            for i, seed in enumerate(seeds):
+                generator.manual_seed(seed)
+                self.b[i] = torch.randn(1, generator=generator) * self.bias_std
+
+
+    def evaluate(self, xs_b):
+        ys_b = super().evaluate(xs_b)
+        b = self.b.to(xs_b.device)
+        return ys_b + b
 
 
 class NoisyLinearRegression(LinearRegression):
