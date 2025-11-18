@@ -164,8 +164,39 @@ def gen_overlapping_train_test(data_sampler, n_points, b_size): # TODO: This may
     return xs_train_pre, xs_test_post
 
 
+### PROMPT LEVEL SHIFTS
+
+def gen_subspace(data_sampler, n_points, b_size, frac=0.5):
+    xs = data_sampler.sample_xs(n_points, b_size)
+    n_dims = xs.shape[2]
+    k = max(1, int(frac * n_dims))
+    eigenvals = torch.zeros(n_dims)
+    eigenvals[:k] = 1
+    scale = sample_transformation(eigenvals, normalize=True)
+    xs_train_pre = xs
+    xs_test_post = xs @ scale
+    return xs_train_pre, xs_test_post
 
 
+def gen_skewed(data_sampler, n_points, b_size, exponent=1.0):
+    xs = data_sampler.sample_xs(n_points, b_size)
+    n_dims = xs.shape[2]
+    idx = torch.arange(n_dims, dtype=xs.dtype, device=xs.device) + 1.0
+    eigenvals = 1.0 / (idx ** float(exponent))
+    scale = sample_transformation(eigenvals, normalize=True)
+    xs_train_pre = xs
+    xs_test_post = xs @ scale
+    return xs_train_pre, xs_test_post
+
+
+def gen_scale_x(data_sampler, n_points, b_size, scale=1.0):
+    xs = data_sampler.sample_xs(n_points, b_size)
+    n_dims = xs.shape[2]
+    eigenvals = scale * torch.ones(n_dims, dtype=xs.dtype, device=xs.device)
+    t = sample_transformation(eigenvals, normalize=True)
+    xs_train_pre = xs
+    xs_test_post = xs @ t
+    return xs_train_pre, xs_test_post
 
 
 
@@ -223,7 +254,7 @@ def eval_model(
 
     generating_func = globals()[f"gen_{prompting_strategy}"]
     for i in range(num_eval_examples // batch_size):
-        if prompting_strategy == "scaled_query":
+        if prompting_strategy == "scaled_query": # TODO: add all the strategies as elif
             xs, xs_p = generating_func(data_sampler, n_points, batch_size, scale=2.0) # TODO: add list of scales
         else:
             xs, xs_p = generating_func(data_sampler, n_points, batch_size)
@@ -279,30 +310,6 @@ def build_evals(conf):
     #         "prompting_strategy": "scaled_query",
     #         "prompting_strategy_kwargs": {"scale": scale_val},
     #     }
-
-    for method in ["half_subspace", "skewed"]:
-        if "subspace" in method:
-            eigenvals = torch.zeros(n_dims)
-            eigenvals[: n_dims // 2] = 1
-        else:
-            eigenvals = 1 / (torch.arange(n_dims) + 1)
-
-        scale = sample_transformation(eigenvals, normalize=True)
-        evaluation_kwargs[f"{method}"] = {
-            "data_sampler_kwargs": {"scale": scale},
-        }
-
-    for dim in ["x", "y"]:
-        for scale in [0.333, 0.5, 2, 3]:
-            if dim == "x":
-                eigenvals = scale * torch.ones(n_dims)
-                t = sample_transformation(eigenvals)
-                scaling_args = {"data_sampler_kwargs": {"scale": t}}
-            else:
-                eigenvals = scale * torch.ones(n_dims)
-                scaling_args = {"task_sampler_kwargs": {"scale": scale}}
-
-            evaluation_kwargs[f"scale-{dim}={scale}"] = scaling_args
 
     for noise_val in [0.5, 1.0, 2.0]:
         evaluation_kwargs[f"noisyLR_std={noise_val}"] = {
