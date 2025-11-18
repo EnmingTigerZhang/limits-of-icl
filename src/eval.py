@@ -234,6 +234,7 @@ def eval_model(
     batch_size=64,
     data_sampler_kwargs={},
     task_sampler_kwargs={},
+    prompting_strategy_kwargs=None,
 ):
     """
     Evaluate a model on a task with a variety of strategies.
@@ -254,10 +255,7 @@ def eval_model(
 
     generating_func = globals()[f"gen_{prompting_strategy}"]
     for i in range(num_eval_examples // batch_size):
-        if prompting_strategy == "scaled_query": # TODO: add all the strategies as elif
-            xs, xs_p = generating_func(data_sampler, n_points, batch_size, scale=2.0) # TODO: add list of scales
-        else:
-            xs, xs_p = generating_func(data_sampler, n_points, batch_size)
+        xs, xs_p = generating_func(data_sampler, n_points, batch_size, **prompting_strategy_kwargs)
 
         metrics = eval_batch(model, task_sampler, xs, xs_p)
         all_metrics.append(metrics)
@@ -296,21 +294,55 @@ def build_evals(conf):
             evaluation_kwargs[name].update(kwargs)
         return evaluation_kwargs
 
-    for strategy in [
-        "random_quadrants",
-        "orthogonal_train_test",
-        "overlapping_train_test",
-        "scaled_query",
-    ]:
-        evaluation_kwargs[strategy] = {"prompting_strategy": strategy}
+    # Query-level shifts
+    for scale_val in [0.5, 2.0, 5.0]:
+        evaluation_kwargs[f"scaled_query_scale={scale_val}"] = {
+            "prompting_strategy": "scaled_query",
+            "prompting_strategy_kwargs": {"scale": scale_val},
+        }
 
-    # TODO: do something like below to test different params
-    # for scale_val in [0.5, 2.0, 5.0]:
-    #     evaluation_kwargs[f"scaled_query_scale={scale_val}"] = {
-    #         "prompting_strategy": "scaled_query",
-    #         "prompting_strategy_kwargs": {"scale": scale_val},
-    #     }
+    for num_flipped in [1, 3, 5]:
+        evaluation_kwargs[f"opposite_quadrants_num_flipped={num_flipped}"] = {
+            "prompting_strategy": "opposite_quadrants",
+            "prompting_strategy_kwargs": {"num_flipped_dims": num_flipped},
+        }
+    
+    for num_unconstrained in [0, 3, 5]:
+        evaluation_kwargs[f"random_quadrants_num_unconstrained={num_unconstrained}"] = {
+            "prompting_strategy": "random_quadrants",
+            "prompting_strategy_kwargs": {"num_unconstrained_points": num_unconstrained},
+        }
 
+    for num_orthogonal in [1, 3, 5]:
+        evaluation_kwargs[f"orthogonal_train_test_num_orthogonal={num_orthogonal}"] = {
+            "prompting_strategy": "orthogonal_train_test",
+            "prompting_strategy_kwargs": {"num_orthogonal_vectors": num_orthogonal},
+        }
+
+    evaluation_kwargs["overlapping_train_test"] = {
+        "prompting_strategy": "overlapping_train_test",
+    }
+
+    # Prompt-level shifts
+    for frac_val in [0.2, 0.5, 0.8]:
+        evaluation_kwargs[f"subspace_frac={frac_val}"] = {
+            "prompting_strategy": "subspace",
+            "prompting_strategy_kwargs": {"frac": frac_val},
+        }
+    
+    for exp_val in [0.5, 1.0, 2.0]:
+        evaluation_kwargs[f"skewed_exponent={exp_val}"] = {
+            "prompting_strategy": "skewed",
+            "prompting_strategy_kwargs": {"exponent": exp_val},
+        }
+
+    for scale_val in [0.5, 2.0, 5.0]:
+        evaluation_kwargs[f"scale_x_scale={scale_val}"] = {
+            "prompting_strategy": "scale_x",
+            "prompting_strategy_kwargs": {"scale": scale_val},
+        }
+    
+    # Task-level shifts
     for noise_val in [0.5, 1.0, 2.0]:
         evaluation_kwargs[f"noisyLR_std={noise_val}"] = {
             "task_sampler_kwargs": {"renormalize_ys": True, "noise_std": noise_val},
