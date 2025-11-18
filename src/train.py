@@ -2,7 +2,6 @@ import os
 from random import randint
 import uuid
 
-from quinine import QuinineArgumentParser
 from tqdm import tqdm
 import torch
 import yaml
@@ -14,7 +13,6 @@ from wrapper_model import build_model
 from eval import get_run_metrics
 from samplers import get_data_sampler
 from curriculum import Curriculum
-from schema import schema
 
 import wandb
 
@@ -40,6 +38,9 @@ def sample_seeds(total_seeds, count):
 def train(model, args):
     optimizer = torch.optim.Adam(model.parameters(), lr=args.training.learning_rate)
     curriculum = Curriculum(args.training.curriculum)
+
+    #print("hello world!")
+    #print(args.training.save_every_steps)
 
     starting_step = 0
     state_path = os.path.join(args.out_dir, "state.pt")
@@ -102,7 +103,7 @@ def train(model, args):
             / curriculum.n_points
         )
 
-        if i % args.wandb.log_every_steps == 0 and not args.test_run:
+        """ if i % args.wandb.log_every_steps == 0 and not args.test_run:
             wandb.log(
                 {
                     "overall_loss": loss,
@@ -114,12 +115,14 @@ def train(model, args):
                     "n_dims": curriculum.n_dims_truncated,
                 },
                 step=i,
-            )
+            ) """
 
         curriculum.update()
 
         pbar.set_description(f"loss {loss}")
         if i % args.training.save_every_steps == 0 and not args.test_run:
+            #print("Got here")
+            #print(f"trying to save to {state_path}")
             training_state = {
                 "model_state_dict": model.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
@@ -164,6 +167,8 @@ def main(args):
 
 
 if __name__ == "__main__":
+    from quinine import QuinineArgumentParser
+    from schema import schema
     parser = QuinineArgumentParser(schema=schema)
     args = parser.parse_quinfig()
     assert args.model.family in ["gpt2", "lstm", "nanogpt"]

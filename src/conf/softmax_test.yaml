@@ -1,5 +1,5 @@
 inherit: 
-    - models/standard.yaml
+    - base_models/standard.yaml
     - wandb.yaml
 
 model:
