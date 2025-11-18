@@ -173,9 +173,8 @@ def gen_subspace(data_sampler, n_points, b_size, frac=0.5):
     eigenvals = torch.zeros(n_dims)
     eigenvals[:k] = 1
     scale = sample_transformation(eigenvals, normalize=True)
-    xs_train_pre = xs
-    xs_test_post = xs @ scale
-    return xs_train_pre, xs_test_post
+    xs_train_pre = xs @ scale
+    return xs_train_pre, None
 
 
 def gen_skewed(data_sampler, n_points, b_size, exponent=1.0):
@@ -184,9 +183,8 @@ def gen_skewed(data_sampler, n_points, b_size, exponent=1.0):
     idx = torch.arange(n_dims, dtype=xs.dtype, device=xs.device) + 1.0
     eigenvals = 1.0 / (idx ** float(exponent))
     scale = sample_transformation(eigenvals, normalize=True)
-    xs_train_pre = xs
-    xs_test_post = xs @ scale
-    return xs_train_pre, xs_test_post
+    xs_train_pre = xs @ scale
+    return xs_train_pre, None
 
 
 def gen_scale_x(data_sampler, n_points, b_size, scale=1.0):
@@ -194,9 +192,8 @@ def gen_scale_x(data_sampler, n_points, b_size, scale=1.0):
     n_dims = xs.shape[2]
     eigenvals = scale * torch.ones(n_dims, dtype=xs.dtype, device=xs.device)
     t = sample_transformation(eigenvals, normalize=True)
-    xs_train_pre = xs
-    xs_test_post = xs @ t
-    return xs_train_pre, xs_test_post
+    xs_train_pre = xs @ t
+    return xs_train_pre, None
 
 
 
@@ -234,7 +231,7 @@ def eval_model(
     batch_size=64,
     data_sampler_kwargs={},
     task_sampler_kwargs={},
-    prompting_strategy_kwargs=None,
+    prompting_strategy_kwargs={},
 ):
     """
     Evaluate a model on a task with a variety of strategies.
