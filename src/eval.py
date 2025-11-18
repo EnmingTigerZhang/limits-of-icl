@@ -178,7 +178,7 @@ def gen_subspace(data_sampler, n_points, b_size, frac=0.5):
     return xs_train_pre, xs_test_post
 
 
-def gen_skewed(data_sampler, n_points, b_size, exponent=2.0):
+def gen_skewed(data_sampler, n_points, b_size, exponent=1.0):
     xs = data_sampler.sample_xs(n_points, b_size)
     n_dims = xs.shape[2]
     idx = torch.arange(n_dims, dtype=xs.dtype, device=xs.device) + 1.0
@@ -189,11 +189,11 @@ def gen_skewed(data_sampler, n_points, b_size, exponent=2.0):
     return xs_train_pre, xs_test_post
 
 
-def gen_scale_x(data_sampler, n_points, b_size, scale=1.0, normalize=True):
+def gen_scale_x(data_sampler, n_points, b_size, scale=1.0):
     xs = data_sampler.sample_xs(n_points, b_size)
     n_dims = xs.shape[2]
     eigenvals = scale * torch.ones(n_dims, dtype=xs.dtype, device=xs.device)
-    t = sample_transformation(eigenvals, normalize=normalize)
+    t = sample_transformation(eigenvals, normalize=True)
     xs_train_pre = xs
     xs_test_post = xs @ t
     return xs_train_pre, xs_test_post
@@ -234,7 +234,6 @@ def eval_model(
     batch_size=64,
     data_sampler_kwargs={},
     task_sampler_kwargs={},
-    prompting_strategy_kwargs=None,
 ):
     """
     Evaluate a model on a task with a variety of strategies.
@@ -254,9 +253,11 @@ def eval_model(
     all_metrics = []
 
     generating_func = globals()[f"gen_{prompting_strategy}"]
-    gen_kwargs = prompting_strategy_kwargs or {}
     for i in range(num_eval_examples // batch_size):
-        xs, xs_p = generating_func(data_sampler, n_points, batch_size, **gen_kwargs)
+        if prompting_strategy == "scaled_query": # TODO: add all the strategies as elif
+            xs, xs_p = generating_func(data_sampler, n_points, batch_size, scale=2.0) # TODO: add list of scales
+        else:
+            xs, xs_p = generating_func(data_sampler, n_points, batch_size)
 
         metrics = eval_batch(model, task_sampler, xs, xs_p)
         all_metrics.append(metrics)
@@ -309,12 +310,6 @@ def build_evals(conf):
     #         "prompting_strategy": "scaled_query",
     #         "prompting_strategy_kwargs": {"scale": scale_val},
     #     }
-
-    for scale in [0.333, 0.5, 2, 3]:
-        evaluation_kwargs[f"scale-x={scale}"] = {
-            "prompting_strategy": "scale_x",
-            "prompting_strategy_kwargs": {"scale": scale, "normalize": True},
-        }
 
     for noise_val in [0.5, 1.0, 2.0]:
         evaluation_kwargs[f"noisyLR_std={noise_val}"] = {
