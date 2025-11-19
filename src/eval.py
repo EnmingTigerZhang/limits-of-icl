@@ -30,6 +30,8 @@ def get_model_from_run(run_path, step=-1, only_conf=False):
             state = torch.load(state_path)
         else:
             state = torch.load(state_path, map_location=torch.device('cpu'))
+        print(state["model_state_dict"].keys())
+        print(os.path.join(run_path, "state.pt"))
         model.load_state_dict(state["model_state_dict"])
     else:
         model_path = os.path.join(run_path, f"model_{step}.pt")
@@ -37,7 +39,10 @@ def get_model_from_run(run_path, step=-1, only_conf=False):
             state_dict = torch.load(model_path)
         else:
             state_dict = torch.load(model_path, map_location=torch.device('cpu'))
-        model.load_state_dict(state_dict)
+        if "model_state_dict" in state_dict:
+            model.load_state_dict(state_dict["model_state_dict"])
+        else:
+            model.load_state_dict(state)
 
     return model, conf
 
@@ -520,6 +525,7 @@ def read_run_dir(run_dir):
                 all_runs[k].append(v)
 
     df = pd.DataFrame(all_runs).sort_values("run_name")
+    print(len(df), len(df.run_name.unique()))
     assert len(df) == len(df.run_name.unique())
     return df
 
