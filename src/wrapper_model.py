@@ -28,8 +28,8 @@ def build_model(conf):
             n_embd=conf.n_embd,
             n_layer=conf.n_layer,
             n_head=conf.n_head,
-            attention_type=conf.model.attention_type,
-            attention_kwargs=conf.model.attention_kwargs,
+            attention_type=conf.attention_type,
+            attention_kwargs=conf.attention_kwargs,
         )
     else:
         raise NotImplementedError
