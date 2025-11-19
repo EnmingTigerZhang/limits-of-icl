@@ -176,3 +176,80 @@ class LocalGlobalCausalSelfAttention(Attention):
         # output projection
         y = self.resid_dropout(self.c_proj(y))
         return y
+
+class MQACausalSelfAttention(Attention):
+    """
+    Multi-Query Attention (MQA):
+    - each head has its own Query projection (Q)
+    - all heads share Key and Value projections (K, V)
+    """
+
+    def __init__(self, config, **kwargs):
+        super().__init__(config, **kwargs)
+        assert self.n_embd % self.n_head == 0
+
+        head_dim = config.n_embd // config.n_head
+
+        # Q: separate for each head → output = (B, T, n_head * head_dim)
+        self.q_proj = nn.Linear(self.n_embd, self.n_embd, bias=self.use_linear_bias)
+
+        # K,V: shared across heads → output = (B, T, head_dim)
+        self.k_proj = nn.Linear(self.n_embd, head_dim, bias=self.use_linear_bias)
+        self.v_proj = nn.Linear(self.n_embd, head_dim, bias=self.use_linear_bias)
+
+        # final projection
+        self.c_proj = nn.Linear(self.n_embd, self.n_embd, bias=self.use_linear_bias)
+
+        self.attn_dropout = nn.Dropout(self.dropout)
+        self.resid_dropout = nn.Dropout(self.dropout)
+
+        # flash attention support
+        self.flash = hasattr(torch.nn.functional, 'scaled_dot_product_attention')
+
+        if not self.flash:
+            # causal mask for fallback path
+            self.register_buffer(
+                "causal_mask",
+                torch.tril(torch.ones(config.block_size, config.block_size))
+                .view(1, 1, config.block_size, config.block_size)
+            )
+
+    def forward(self, x):
+        B, T, C = x.size()
+        head_dim = C // self.n_head
+
+        # ---- Compute projections ----
+        q = self.q_proj(x)                     # (B, T, C)
+        k = self.k_proj(x)                     # (B, T, head_dim)
+        v = self.v_proj(x)                     # (B, T, head_dim)
+
+        # reshape Q: (B, n_head, T, head_dim)
+        q = q.view(B, T, self.n_head, head_dim).transpose(1, 2)
+
+        # reshape K,V shared: (B, 1, T, head_dim)
+        k = k.unsqueeze(1)   # insert head dim, but always 1
+        v = v.unsqueeze(1)
+
+        # ---- Flash Attention path ----
+        if self.flash:
+            y = torch.nn.functional.scaled_dot_product_attention(
+                q, k, v,
+                attn_mask=None,
+                dropout_p=self.dropout if self.training else 0.0,
+                is_causal=True
+            )
+        else:
+            # ---- Manual attention ----
+            att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(head_dim))
+            att = att.masked_fill(self.causal_mask[:, :, :T, :T] == 0, float('-inf'))
+            att = F.softmax(att, dim=-1)
+            att = self.attn_dropout(att)
+            y = att @ v  # (B, nh, T, head_dim)
+
+        # ---- Combine heads ----
+        y = y.transpose(1, 2).contiguous().view(B, T, C)
+
+        # final projection
+        y = self.resid_dropout(self.c_proj(y))
+        return y
+
