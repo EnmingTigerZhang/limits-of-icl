@@ -125,7 +125,6 @@ def plot_param_sweep(all_metrics, models_to_plot=None):
         ax.set_xlabel(param_name.replace("_", " "))
         ax.set_ylabel("squared error")
         ax.set_title(f"Effect of {param_name.replace('_', ' ')}")
-        ax.legend()
         fig.set_size_inches(5, 4)
         figs.append(fig)
     

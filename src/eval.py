@@ -52,7 +52,7 @@ def get_model_from_run(run_path, step=-1, only_conf=False):
 
 def eval_batch(model, task_sampler, xs, xs_p=None):
     task = task_sampler()
-    if torch.cuda.is_available() and model.name.split("_")[0] in ["gpt2", "lstm"]:
+    if torch.cuda.is_available():
         device = "cuda"
     else:
         device = "cpu"
@@ -398,8 +398,8 @@ def compute_evals(all_models, evaluation_kwargs, save_path=None, recompute=False
         # 15-23 is prompt level
         # 24-33 is task level
         i += 1
-        if i <= 23:
-            continue
+        # if i <= 23:
+        #     continue
         # if i >= 24:
         #     continue
         print(f"Evaluating {eval_name}", i)
