@@ -13,6 +13,7 @@ from wrapper_model import build_model
 from eval import get_run_metrics
 from samplers import get_data_sampler
 from curriculum import Curriculum
+import csv
 
 import wandb
 
@@ -39,8 +40,20 @@ def train(model, args):
     optimizer = torch.optim.Adam(model.parameters(), lr=args.training.learning_rate)
     curriculum = Curriculum(args.training.curriculum)
 
-    #print("hello world!")
-    #print(args.training.save_every_steps)
+    # --- CSV Logging Setup ---
+    log_file_path = os.path.join(args.out_dir, "training_log.csv")
+    log_interval = 500  # Log every 500 iterations
+    
+    # Check if the log file needs a header
+    write_header = not os.path.exists(log_file_path)
+
+    # Open the file in append mode. It will be created if it doesn't exist.
+    log_file = open(log_file_path, 'a', newline='')
+    csv_writer = csv.writer(log_file)
+
+    if write_header:
+        csv_writer.writerow(["step", "loss", "n_points", "n_dims"])
+    # --- End CSV Logging Setup ---
 
     starting_step = 0
     state_path = os.path.join(args.out_dir, "state.pt")
@@ -118,6 +131,12 @@ def train(model, args):
             ) """
 
         curriculum.update()
+
+        # --- CSV Logging ---
+        if i % log_interval == 0:
+            csv_writer.writerow([i, loss, curriculum.n_points, curriculum.n_dims_truncated])
+            log_file.flush() # Ensure data is written to disk
+        # --- End CSV Logging ---
 
         pbar.set_description(f"loss {loss}")
         if i % args.training.save_every_steps == 0 and not args.test_run:
