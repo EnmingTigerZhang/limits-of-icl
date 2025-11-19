@@ -52,27 +52,25 @@ def eval_batch(model, task_sampler, xs, xs_p=None):
     else:
         device = "cpu"
 
+    context_length = xs.shape[1] - 1
+    query_index = context_length 
+    
+    xs_context = xs[:, :context_length, :]
+    
     if xs_p is None:
-        print("did it go here?")
-        ys = task.evaluate(xs)
-        pred = model(xs.to(device), ys.to(device)).detach()
-        metrics = task.get_metric()(pred.cpu(), ys)
+        xs_query = xs[:, query_index:query_index+1, :]
     else:
-        print("step -1")
-        b_size, n_points, _ = xs.shape
-        metrics = torch.zeros(b_size, n_points)
-        print("before loop", n_points)
-        for i in range(n_points):
-            print("step", i)
-            xs_comb = torch.cat((xs[:, :i, :], xs_p[:, i:, :]), dim=1)
-            print("about to evaluate")
-            ys = task.evaluate(xs_comb)
-            print("sending to model")
-            pred = model(xs_comb.to(device), ys.to(device), inds=[i]).detach()
-            print("model is done")
-            metrics[:, i] = task.get_metric()(pred.cpu(), ys)[:, i]
+        xs_query = xs_p[:, query_index:query_index+1, :]
 
-    return metrics
+    xs_comb = torch.cat((xs_context, xs_query), dim=1)
+    
+    ys = task.evaluate(xs_comb)
+    
+    pred = model(xs_comb.to(device), ys.to(device), inds=[query_index]).detach()
+    
+    metrics = task.get_metric()(pred.cpu(), ys)[:, query_index]
+
+    return metrics.unsqueeze(1)
 
 
 # Functions for generating different kinds of train/test data
@@ -257,21 +255,16 @@ def eval_model(
 
     assert num_eval_examples % batch_size == 0
     data_sampler = get_data_sampler(data_name, n_dims, **data_sampler_kwargs)
-    print("finished data sampler!")
     task_sampler = get_task_sampler(
         task_name, n_dims, batch_size, **task_sampler_kwargs
     )
-    print("made it here?")
-
     all_metrics = []
 
     generating_func = globals()[f"gen_{prompting_strategy}"]
     print(num_eval_examples // batch_size)
     for i in range(num_eval_examples // batch_size):
         xs, xs_p = generating_func(data_sampler, n_points, batch_size, **prompting_strategy_kwargs)
-        print("before eval batch")
         metrics = eval_batch(model, task_sampler, xs, xs_p)
-        print("after eval batch")
         all_metrics.append(metrics)
 
     metrics = torch.cat(all_metrics, dim=0)
@@ -388,18 +381,21 @@ def build_evals(conf):
 
 
 def compute_evals(all_models, evaluation_kwargs, save_path=None, recompute=False):
-    try:
-        with open(save_path) as fp:
-            all_metrics = json.load(fp)
-    except Exception:
-        all_metrics = {}
+    # try:
+    #     with open(save_path) as fp:
+    #         all_metrics = json.load(fp)
+    # except Exception:
+    all_metrics = {}
 
     i = 0
     for eval_name, kwargs in tqdm(evaluation_kwargs.items()):
+        # 2-14 is query level
+        # 15-23 is prompt level
+        # 24-33 is task level
         i += 1
-        if i <= 14:
+        if i <= 23:
             continue
-        # if i >= 16:
+        # if i >= 24:
         #     continue
         print(f"Evaluating {eval_name}", i)
 
@@ -410,7 +406,6 @@ def compute_evals(all_models, evaluation_kwargs, save_path=None, recompute=False
             print("Evaluating model:", model.name, recompute)
             # if model.name in metrics and not recompute:
             #     continue
-            print("Evaluating now")
             metrics[model.name] = eval_model(model, **kwargs)
         all_metrics[eval_name] = metrics
 
