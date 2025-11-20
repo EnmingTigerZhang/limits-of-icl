@@ -112,14 +112,12 @@ def gen_opposite_quadrants(data_sampler, n_points, b_size, num_flipped_dims=0):
     return xs_train_pre, xs_test_post
 
 
-def gen_random_quadrants(data_sampler, n_points, b_size, num_unconstrained_points=0):
+def gen_random_quadrants(data_sampler, n_points, b_size, num_constrained_points=0):
     xs = data_sampler.sample_xs(n_points, b_size)
     n_dims = xs.shape[2]
     pattern = torch.randn([b_size, 1, n_dims]).sign()
 
     xs_train_pre = xs.clone()
-
-    num_constrained_points = n_points - num_unconstrained_points
     
     if num_constrained_points > 0:
         for i in range(b_size):
@@ -202,14 +200,14 @@ def gen_skewed(data_sampler, n_points, b_size, exponent=1.0):
     xs_train_pre = xs @ scale
     return xs_train_pre, None
 
-
-def gen_scale_x(data_sampler, n_points, b_size, scale=1.0):
-    xs = data_sampler.sample_xs(n_points, b_size)
-    n_dims = xs.shape[2]
-    eigenvals = scale * torch.ones(n_dims, dtype=xs.dtype, device=xs.device)
-    t = sample_transformation(eigenvals, normalize=True)
-    xs_train_pre = xs @ t
-    return xs_train_pre, None
+# TODO: get rid of this one
+# def gen_scale_x(data_sampler, n_points, b_size, scale=1.0):
+#     xs = data_sampler.sample_xs(n_points, b_size)
+#     n_dims = xs.shape[2]
+#     eigenvals = scale * torch.ones(n_dims, dtype=xs.dtype, device=xs.device)
+#     t = sample_transformation(eigenvals, normalize=True)
+#     xs_train_pre = xs @ t
+#     return xs_train_pre, None
 
 
 
@@ -266,7 +264,6 @@ def eval_model(
     all_metrics = []
 
     generating_func = globals()[f"gen_{prompting_strategy}"]
-    print(num_eval_examples // batch_size)
     for i in range(num_eval_examples // batch_size):
         xs, xs_p = generating_func(data_sampler, n_points, batch_size, **prompting_strategy_kwargs)
         metrics = eval_batch(model, task_sampler, xs, xs_p)
@@ -307,25 +304,25 @@ def build_evals(conf):
         return evaluation_kwargs
 
     # Query-level shifts
-    for scale_val in [0.5, 2.0, 5.0]:
+    for scale_val in [0.1 * i for i in range(1, 51, 2)]:
         evaluation_kwargs[f"scaled_query_scale={scale_val}"] = {
             "prompting_strategy": "scaled_query",
             "prompting_strategy_kwargs": {"scale": scale_val},
         }
 
-    for num_flipped in [1, 3, 5]:
+    for num_flipped in [i for i in range(1, n_dims, 1)]:
         evaluation_kwargs[f"opposite_quadrants_num_flipped={num_flipped}"] = {
             "prompting_strategy": "opposite_quadrants",
             "prompting_strategy_kwargs": {"num_flipped_dims": num_flipped},
         }
     
-    for num_unconstrained in [0, 3, 5]:
-        evaluation_kwargs[f"random_quadrants_num_unconstrained={num_unconstrained}"] = {
+    for num_constrained in [i for i in range(1, n_points, 2)]:
+        evaluation_kwargs[f"random_quadrants_num_constrained={num_constrained}"] = {
             "prompting_strategy": "random_quadrants",
-            "prompting_strategy_kwargs": {"num_unconstrained_points": num_unconstrained},
+            "prompting_strategy_kwargs": {"num_constrained_points": num_constrained},
         }
 
-    for num_orthogonal in [1, 3, 5]:
+    for num_orthogonal in [i for i in range(1, min(n_points, n_dims), 1)]:
         evaluation_kwargs[f"orthogonal_train_test_num_orthogonal={num_orthogonal}"] = {
             "prompting_strategy": "orthogonal_train_test",
             "prompting_strategy_kwargs": {"num_orthogonal_vectors": num_orthogonal},
@@ -336,38 +333,39 @@ def build_evals(conf):
     }
 
     # Prompt-level shifts
-    for frac_val in [0.2, 0.5, 0.8]:
+    for frac_val in [0.1 * i for i in range(1, 10+1, 1)]:
         evaluation_kwargs[f"subspace_frac={frac_val}"] = {
             "prompting_strategy": "subspace",
             "prompting_strategy_kwargs": {"frac": frac_val},
         }
     
-    for exp_val in [0.5, 1.0, 2.0]:
+    for exp_val in [0.1 * i for i in range(1, 30, 2)]:
         evaluation_kwargs[f"skewed_exponent={exp_val}"] = {
             "prompting_strategy": "skewed",
             "prompting_strategy_kwargs": {"exponent": exp_val},
         }
 
-    for scale_val in [0.5, 2.0, 5.0]:
-        evaluation_kwargs[f"scale_x_scale={scale_val}"] = {
-            "prompting_strategy": "scale_x",
-            "prompting_strategy_kwargs": {"scale": scale_val},
-        }
+    # TODO: get rid of this one
+    # for scale_val in [0.5, 2.0, 5.0]:
+    #     evaluation_kwargs[f"scale_x_scale={scale_val}"] = {
+    #         "prompting_strategy": "scale_x",
+    #         "prompting_strategy_kwargs": {"scale": scale_val},
+    #     }
     
     # Task-level shifts
-    for noise_val in [0.5, 1.0, 2.0]:
+    for noise_val in [i * 0.1 for i in range(1, 50, 2)]:
         evaluation_kwargs[f"noisyLR_std={noise_val}"] = {
             "task_sampler_kwargs": {"renormalize_ys": True, "noise_std": noise_val},
             "task_name": "noisy_linear_regression",
         }
 
-    for bias_val in [0.5, 1.0, 2.0]:
+    for bias_val in [i * 0.1 for i in range(1, 50, 2)]:
         evaluation_kwargs[f"affineLR_std={bias_val}"] = {
             "task_sampler_kwargs": {"bias_std": bias_val},
             "task_name": "affine_regression",
         }
 
-    for sparsity_val in [3, 5, 10]:
+    for sparsity_val in [i for i in range(1, n_dims, 1)]:
         evaluation_kwargs[f"sparseLR_k={sparsity_val}"] = {
             "task_sampler_kwargs": {"sparsity": sparsity_val},
             "task_name": "sparse_linear_regression",
@@ -402,13 +400,11 @@ def compute_evals(all_models, evaluation_kwargs, save_path=None, recompute=False
         #     continue
         # if i >= 24:
         #     continue
-        print(f"Evaluating {eval_name}", i)
 
         metrics = {}
         if eval_name in all_metrics and not recompute:
             metrics = all_metrics[eval_name]
         for model in all_models:
-            print("Evaluating model:", model.name, recompute)
             # if model.name in metrics and not recompute:
             #     continue
             metrics[model.name] = eval_model(model, **kwargs)
@@ -494,8 +490,14 @@ def read_run_dir(run_dir):
     all_runs = {}
     for task in os.listdir(run_dir):
         task_dir = os.path.join(run_dir, task)
+        # Skip non-directory files (like .DS_Store on macOS)
+        if not os.path.isdir(task_dir):
+            continue
         for run_id in os.listdir(task_dir):
             run_path = os.path.join(task_dir, run_id)
+            # Skip non-directory files
+            if not os.path.isdir(run_path):
+                continue
             _, conf = get_model_from_run(run_path, only_conf=True)
             params = {}
             params["run_id"] = run_id
@@ -525,7 +527,6 @@ def read_run_dir(run_dir):
                 all_runs[k].append(v)
 
     df = pd.DataFrame(all_runs).sort_values("run_name")
-    print(len(df), len(df.run_name.unique()))
     assert len(df) == len(df.run_name.unique())
     return df
 
@@ -533,7 +534,6 @@ if __name__ == "__main__":
     run_dir = sys.argv[1]
     for task in os.listdir(run_dir):
         task_dir = os.path.join(run_dir, task)
-        print(f"Evaluating task {task}")
         for run_id in tqdm(os.listdir(task_dir)):
             run_path = os.path.join(run_dir, task, run_id)
             metrics = get_run_metrics(run_path)

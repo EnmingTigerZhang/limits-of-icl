@@ -6,9 +6,6 @@ from tqdm import tqdm
 from sklearn.svm import LinearSVC
 from sklearn.linear_model import LogisticRegression, Lasso
 import warnings
-from sklearn import tree
-import xgboost as xgb
-
 #from base_models import NeuralNetwork, ParallelNetworks
 
 
