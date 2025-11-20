@@ -10,6 +10,41 @@ sns.set_theme("notebook", "darkgrid")
 palette = sns.color_palette("colorblind")
 
 
+def get_display_name(model_name):
+    """Extract a clean display name from model identifier, focusing on attention type."""
+    # Handle specific run_ids explicitly
+    if model_name == "nanogpt_local_100k_5":
+        return "Local (w=5)"
+    elif model_name == "nanogpt_local_100k_8":
+        return "Local (w=8)"
+    elif model_name == "nanogpt_local_100k_15":
+        return "Local (w=15)"
+    elif model_name == "nanogpt_mqa_100k":
+        return "MQA"
+    elif model_name == "nanogpt_softmax_100k":
+        return "Softmax"
+    elif model_name == "nanogpt_softmax_test":
+        return "Softmax"
+    elif model_name == "pretrained":
+        return "Pretrained"
+    elif "softmax" in model_name.lower():
+        return "Softmax"
+    elif "mqa" in model_name.lower():
+        return "MQA"
+    elif "local" in model_name.lower():
+        return "Local Attention"
+    elif "linear" in model_name.lower() and "attention" in model_name.lower():
+        return "Linear Attention"
+    elif "reformer" in model_name.lower():
+        return "Reformer"
+    elif "performer" in model_name.lower():
+        return "Performer"
+    elif "pretrained" in model_name.lower():
+        return "Pretrained"
+    # Otherwise return the model name as is
+    return model_name
+
+
 relevant_model_names = {
     "linear_regression": [
         "Transformer",
@@ -44,23 +79,28 @@ def basic_plot(metrics, models=None, trivial=1.0):
     fig, ax = plt.subplots(1, 1)
 
     if models is not None:
-        metrics = {k: metrics[k] for k in models}
+        metrics = {k: metrics[k] for k in models if k in metrics}
 
     color = 0
-    ax.axhline(trivial, ls="--", color="gray")
-    for name, vs in metrics.items():
-        ax.plot(vs["mean"], "-", label=name, color=palette[color % 10], lw=2)
+    ax.axhline(trivial, ls="--", color="gray", label="zero estimator")
+    for name in sorted(metrics.keys()):  # Sort for consistent ordering
+        vs = metrics[name]
+        display_name = get_display_name(name)
+        ax.plot(vs["mean"], "-", label=display_name, color=palette[color % 10], lw=2)
         low = vs["bootstrap_low"]
         high = vs["bootstrap_high"]
-        ax.fill_between(range(len(low)), low, high, alpha=0.3)
+        ax.fill_between(range(len(low)), low, high, alpha=0.3, color=palette[color % 10])
         color += 1
     ax.set_xlabel("in-context examples")
     ax.set_ylabel("squared error")
-    ax.set_xlim(-1, len(low) + 0.1)
+    if len(metrics) > 0:
+        first_metric = list(metrics.values())[0]
+        ax.set_xlim(-1, len(first_metric["mean"]) + 0.1)
     ax.set_ylim(-0.1, 1.25)
 
-    legend = ax.legend(loc="upper left", bbox_to_anchor=(1, 1))
-    fig.set_size_inches(4, 3)
+    legend = ax.legend(loc="center left", bbox_to_anchor=(1, 0.5), title="Attention")
+    fig.set_size_inches(6, 4)
+    plt.tight_layout()
     for line in legend.get_lines():
         line.set_linewidth(3)
 
@@ -111,24 +151,58 @@ def plot_param_sweep(all_metrics, models_to_plot=None):
 
         fig, ax = plt.subplots(1, 1)
         color_idx = 0
-        for model_name, values in model_results.items():
+        for model_name in sorted(model_results.keys()):  # Sort for consistent ordering
+            values = model_results[model_name]
             if len(values) < 2:
                 continue
             
             values.sort()
             param_vals = [v[0] for v in values]
             mean_errors = [v[1] for v in values]
-
-            ax.plot(param_vals, mean_errors, "o-", label=model_name, color=palette[color_idx % 10], lw=2)
+            
+            display_name = get_display_name(model_name)
+            ax.plot(param_vals, mean_errors, "o-", label=display_name, color=palette[color_idx % 10], lw=2, markersize=6)
             color_idx += 1
 
         ax.set_xlabel(param_name.replace("_", " "))
         ax.set_ylabel("squared error")
         ax.set_title(f"Effect of {param_name.replace('_', ' ')}")
-        fig.set_size_inches(5, 4)
+        ax.legend(loc="center left", bbox_to_anchor=(1, 0.5), title="Attention")
+        ax.grid(True, alpha=0.3)
+        fig.set_size_inches(7, 4)
+        plt.tight_layout()
         figs.append(fig)
     
     return figs
+
+
+def plot_experiment(all_metrics, experiment_name, models_to_plot=None, trivial=1.0):
+    """
+    Plot a specific experiment comparing multiple models.
+    
+    Args:
+        all_metrics: Dictionary with structure {experiment_name: {model_name: metrics}}
+        experiment_name: Name of the experiment to plot (e.g., "standard", "noisyLR_std=1.0")
+        models_to_plot: List of model names to include, or None for all models
+        trivial: Baseline value to plot as horizontal line
+    
+    Returns:
+        fig, ax: Matplotlib figure and axis objects
+    """
+    if experiment_name not in all_metrics:
+        print(f"Experiment '{experiment_name}' not found in metrics.")
+        print(f"Available experiments: {list(all_metrics.keys())}")
+        return None, None
+    
+    experiment_metrics = all_metrics[experiment_name]
+    
+    if models_to_plot is not None:
+        experiment_metrics = {k: v for k, v in experiment_metrics.items() if k in models_to_plot}
+    
+    fig, ax = basic_plot(experiment_metrics, trivial=trivial)
+    ax.set_title(f"Experiment: {experiment_name}")
+    
+    return fig, ax
 
 
 def collect_results(run_dir, df, valid_row=None, rename_eval=None, rename_model=None):

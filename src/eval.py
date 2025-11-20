@@ -266,7 +266,6 @@ def eval_model(
     all_metrics = []
 
     generating_func = globals()[f"gen_{prompting_strategy}"]
-    print(num_eval_examples // batch_size)
     for i in range(num_eval_examples // batch_size):
         xs, xs_p = generating_func(data_sampler, n_points, batch_size, **prompting_strategy_kwargs)
         metrics = eval_batch(model, task_sampler, xs, xs_p)
@@ -494,8 +493,14 @@ def read_run_dir(run_dir):
     all_runs = {}
     for task in os.listdir(run_dir):
         task_dir = os.path.join(run_dir, task)
+        # Skip non-directory files (like .DS_Store on macOS)
+        if not os.path.isdir(task_dir):
+            continue
         for run_id in os.listdir(task_dir):
             run_path = os.path.join(task_dir, run_id)
+            # Skip non-directory files
+            if not os.path.isdir(run_path):
+                continue
             _, conf = get_model_from_run(run_path, only_conf=True)
             params = {}
             params["run_id"] = run_id
@@ -525,7 +530,6 @@ def read_run_dir(run_dir):
                 all_runs[k].append(v)
 
     df = pd.DataFrame(all_runs).sort_values("run_name")
-    print(len(df), len(df.run_name.unique()))
     assert len(df) == len(df.run_name.unique())
     return df
 
