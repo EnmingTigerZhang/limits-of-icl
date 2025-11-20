@@ -253,3 +253,129 @@ class MQACausalSelfAttention(Attention):
         y = self.resid_dropout(self.c_proj(y))
         return y
 
+class FAVORCausalSelfAttention(Attention):
+    """
+    Performer-style FAVOR+ causal self-attention using positive random features
+    to approximate the scaled softmax kernel in (roughly) linear time.
+
+    - rf_dim (int, optional via kwargs):
+        Number of random features m for the feature map phi.
+        Default: 2 * head_dim.
+    """
+
+    def __init__(self, config, **kwargs):
+        super().__init__(config, **kwargs)
+        assert self.n_embd % self.n_head == 0
+        self.head_dim = self.n_embd // self.n_head
+
+        # number of random features for phi
+        self.rf_dim = int(kwargs.get("rf_dim", 2 * self.head_dim))
+        assert self.rf_dim > 0
+
+        # key, query, value projections for all heads, but in a batch
+        self.c_attn = nn.Linear(self.n_embd, 3 * self.n_embd, bias=self.use_linear_bias)
+        self.c_proj = nn.Linear(self.n_embd, self.n_embd, bias=self.use_linear_bias)
+
+        # regularization
+        self.attn_dropout = nn.Dropout(self.dropout)
+        self.resid_dropout = nn.Dropout(self.dropout)
+
+        # Positive random feature weights for FAVOR+ (shared across heads)
+        # omega ~ N(0, I), saved in state_dict
+        w = torch.randn(self.head_dim, self.rf_dim)
+        self.register_buffer("omega", w, persistent=True)
+
+        # small epsilon to avoid division by zero
+        self.eps = 1e-6
+
+    def _phi(self, x):
+        """
+        Positive random feature map phi for the softmax kernel.
+
+        x: (B, nh, T, head_dim)
+        returns: (B, nh, T, rf_dim)
+
+        Conceptually:
+          phi(x)_j = exp(omega_j^T x - ||x||^2 / 2) / sqrt(m)
+        """
+        B, nh, T, d = x.shape
+        m = self.rf_dim
+
+        # (B*nh*T, d)
+        x_flat = x.reshape(B * nh * T, d)
+
+        # projection: (B*nh*T, m)
+        proj = x_flat @ self.omega  # omega: (d, m)
+
+        # ||x||^2 / 2 term: (B*nh*T, 1)
+        norm_sq_half = 0.5 * (x_flat * x_flat).sum(dim=-1, keepdim=True)
+
+        # positive random features: (B*nh*T, m)
+        phi_flat = torch.exp(proj - norm_sq_half) / math.sqrt(m)
+
+        # reshape back: (B, nh, T, m)
+        phi = phi_flat.view(B, nh, T, m)
+        return phi
+
+    def forward(self, x):
+        """
+        x: (B, T, C = n_embd)
+        returns: (B, T, C)
+        """
+        B, T, C = x.size()
+        assert C == self.n_embd
+
+        # project to q, k, v: (B, T, 3C) -> (B, T, C) each
+        q, k, v = self.c_attn(x).split(self.n_embd, dim=2)
+
+        # (B, T, nh, head_dim) -> (B, nh, T, head_dim)
+        q = q.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
+        k = k.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
+        v = v.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
+
+        # scale q, k for "scaled" dot product
+        scale = 1.0 / math.sqrt(self.head_dim)
+        q = q * scale
+        k = k * scale
+
+        # (optional) dropout on values
+        v = self.attn_dropout(v)
+
+        # random feature maps: (B, nh, T, m)
+        phi_q = self._phi(q)
+        phi_k = self._phi(k)
+
+        B, nh, T, d_h = v.shape
+        m = self.rf_dim
+
+        # ---- Causal FAVOR via vectorized prefix sums ----
+        # S_t = sum_{j<=t} phi_k_j ⊗ v_j  in R^{m x d_h}
+        # Z_t = sum_{j<=t} phi_k_j        in R^{m}
+        #
+        # kv = phi_k ⊗ v -> (B, nh, T, m, d_h)
+        kv = phi_k.unsqueeze(-1) * v.unsqueeze(-2)   # (B, nh, T, m, d_h)
+
+        # flatten last two dims, cumsum over time, then reshape back
+        kv_flat = kv.view(B, nh, T, m * d_h)        # (B, nh, T, m*d_h)
+        S_flat = torch.cumsum(kv_flat, dim=2)       # (B, nh, T, m*d_h)
+        S = S_flat.view(B, nh, T, m, d_h)           # (B, nh, T, m, d_h)
+
+        # normalizer prefix sums: (B, nh, T, m)
+        Z = torch.cumsum(phi_k, dim=2)
+
+        # num_t = phi_q_t^T S_t  -> (B, nh, T, d_h)
+        # den_t = phi_q_t^T Z_t  -> (B, nh, T)
+        #
+        # Explicit contractions over "m" using einsum:
+        num = torch.einsum("bhtm,bhtmd->bhtd", phi_q, S)   # (B, nh, T, d_h)
+        den = torch.einsum("bhtm,bhtm->bht", phi_q, Z)     # (B, nh, T)
+        den = den.unsqueeze(-1) + self.eps                 # (B, nh, T, 1)
+
+        y = num / den                                      # (B, nh, T, d_h)
+
+        # (B, nh, T, d_h) -> (B, T, C)
+        y = y.transpose(1, 2).contiguous().view(B, T, C)
+
+        # output projection + residual dropout
+        y = self.resid_dropout(self.c_proj(y))
+        return y
