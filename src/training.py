@@ -15,6 +15,7 @@ if '.' not in sys.path:
 # Import the necessary functions from your project
 from train import train
 from wrapper_model import build_model
+from plot_loss import plot_full_loss_curve
 # All other necessary modules (tasks, samplers, etc.) will be imported by the above.
 
 # --- 2. Define the Configuration as a Python Dictionary ---
@@ -22,13 +23,15 @@ from wrapper_model import build_model
 # It combines the settings from softmax_test.yaml and models/standard.yaml.
 config_dict = {
     # "out_dir": "/home/kenzhengjk/182/limits-of-icl/models/nanogpt_softmax_100k/",
-    "out_dir": "/home/kenzhengjk/182/limits-of-icl/models/nanogpt_local_100k/",
+    "out_dir": "/home/kenzhengjk/182/limits-of-icl/models/nanogpt_local_100k_8",
+    # "out_dir": "/home/kenzhengjk/182/limits-of-icl/models/nanogpt_mqa_100k/",
     "test_run": False,
     "model": {
         "family": "nanogpt",
         # "attention_type": "softmax_causal",
         "attention_type": "local_global",
-        "attention_kwargs": {},
+        # "attention_type": "mqa",
+        "attention_kwargs": {'local_window_size': 8, 'global_attn_indices': [10, 20, 30, 40]},
         "n_dims": 20,
         "n_positions": 41,
         "n_embd": 256,
@@ -135,5 +138,7 @@ model.train()
 
 print("\nStarting training...")
 train(model, args)
+
+plot_full_loss_curve(args.out_dir, args.model.attention_type)
 
 print("\nTraining finished successfully!")
