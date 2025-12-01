@@ -379,3 +379,86 @@ class FAVORCausalSelfAttention(Attention):
         # output projection + residual dropout
         y = self.resid_dropout(self.c_proj(y))
         return y
+    
+
+class ReLACausalSelfAttention(Attention):
+    """
+    Rectified Linear Attention (ReLA) with Gated RMSNorm (ReLA-g).
+    
+    Replaces the softmax activation with ReLU to achieve sparsity.
+    Stabilizes training using a learnable Gated RMSNorm applied to the 
+    concatenated head outputs, as described in paper.
+    
+    Ref: "Sparse Attention with Linear Units": https://arxiv.org/abs/2104.07012
+    """
+    def __init__(self, config, **kwargs):
+        super().__init__(config, **kwargs)
+        assert self.n_embd % self.n_head == 0
+        
+        # Key, Query, Value projections
+        self.c_attn = nn.Linear(self.n_embd, 3 * self.n_embd, bias=self.use_linear_bias)
+        # Output projection
+        self.c_proj = nn.Linear(self.n_embd, self.n_embd, bias=self.use_linear_bias)
+        
+        # Regularization
+        self.attn_dropout = nn.Dropout(self.dropout)
+        self.resid_dropout = nn.Dropout(self.dropout)
+        
+        # ReLA-g specific parameters: RMSNorm gain (g) and Gating weight (w)
+        # These are applied to the concatenated output of all heads (dimension n_embd)
+        self.rms_gain = nn.Parameter(torch.ones(self.n_embd))
+        self.gate_w = nn.Parameter(torch.zeros(self.n_embd)) # Init to 0 makes gate 0.5 initially
+        self.eps = 1e-8
+
+        # Causal mask to ensure attention is only applied to the left
+        self.register_buffer("causal_mask", torch.tril(torch.ones(config.block_size, config.block_size))
+                                        .view(1, 1, config.block_size, config.block_size))
+
+    def forward(self, x):
+        B, T, C = x.size() # batch size, sequence length, embedding dimensionality (n_embd)
+
+        # Calculate query, key, values for all heads in batch
+        q, k, v = self.c_attn(x).split(self.n_embd, dim=2)
+        k = k.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
+        q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
+        v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
+
+        # 1. Scaled Dot-Product
+        # ReLA uses standard scaling factor 1/sqrt(head_dim)
+        att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
+        
+        # 2. Causal Masking
+        # We fill future positions with -inf so that ReLU(mask) becomes exactly 0.
+        att = att.masked_fill(self.causal_mask[:,:,:T,:T] == 0, float('-inf'))
+        
+        # 3. Rectified Linear Activation (ReLU)
+        att = F.relu(att)
+        
+        # 4. Dropout
+        att = self.attn_dropout(att)
+        
+        # 5. Weighted Sum
+        y = att @ v # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
+        
+        # Re-assemble all head outputs side by side
+        y = y.transpose(1, 2).contiguous().view(B, T, C)
+
+        # 6. ReLA-g Stabilization (Gated RMSNorm)
+        # Applied to the concatenated representation z (which is y here)
+        # Formula: LN(z) = Sigmoid(w * z) * RMSNorm(z)
+        
+        # RMSNorm part: z / RMS(z) * g
+        rms = torch.rsqrt(y.pow(2).mean(-1, keepdim=True) + self.eps)
+        y_norm = y * rms * self.rms_gain
+        
+        # Gating part: Sigmoid(w * z)
+        gate = torch.sigmoid(y * self.gate_w)
+        
+        # Apply gate to normalized output
+        y = y_norm * gate
+
+        # Output projection
+        y = self.resid_dropout(self.c_proj(y))
+        
+        return y
+    
