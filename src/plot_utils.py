@@ -21,14 +21,22 @@ def get_display_name(model_name):
         return "Local (w=15)"
     elif model_name == "nanogpt_mqa_100k":
         return "MQA"
+    elif model_name == "nanogpt_rela_100k":
+        return "Relative"
+    elif model_name == "nanogpt_favor_100k":
+        return "FAVOR+"
     elif model_name == "nanogpt_softmax_100k":
         return "Softmax"
     elif model_name == "nanogpt_softmax_test":
         return "Softmax"
     elif model_name == "pretrained":
         return "Pretrained"
+    elif "favor" in model_name.lower():
+        return "FAVOR+"
     elif "softmax" in model_name.lower():
         return "Softmax"
+    elif "rela" in model_name.lower():
+        return "Relative"
     elif "mqa" in model_name.lower():
         return "MQA"
     elif "local" in model_name.lower():
@@ -141,7 +149,16 @@ def plot_param_sweep(all_metrics, models_to_plot=None):
                 if model_name in results:
                     if model_name not in param_groups[param_name]:
                         param_groups[param_name][model_name] = []
-                    param_groups[param_name][model_name].append((param_val, results[model_name]["mean"][0]))
+                    
+                    # Store mean, std, and bootstrap limits
+                    metric_data = {
+                        "val": param_val,
+                        "mean": results[model_name]["mean"][0],
+                        "std": results[model_name]["std"][0],
+                        "low": results[model_name]["bootstrap_low"][0],
+                        "high": results[model_name]["bootstrap_high"][0]
+                    }
+                    param_groups[param_name][model_name].append(metric_data)
 
     # Create a plot for each parameter sweep
     figs = []
@@ -156,12 +173,20 @@ def plot_param_sweep(all_metrics, models_to_plot=None):
             if len(values) < 2:
                 continue
             
-            values.sort()
-            param_vals = [v[0] for v in values]
-            mean_errors = [v[1] for v in values]
+            values.sort(key=lambda x: x["val"])
+            
+            param_vals = [v["val"] for v in values]
+            mean_errors = [v["mean"] for v in values]
+            
+            lower_errors = [v["mean"] - v["low"] for v in values]
+            upper_errors = [v["high"] - v["mean"] for v in values]
+            yerr = [lower_errors, upper_errors]
             
             display_name = get_display_name(model_name)
-            ax.plot(param_vals, mean_errors, "o-", label=display_name, color=palette[color_idx % 10], lw=2, markersize=6)
+            
+            ax.errorbar(param_vals, mean_errors, yerr=yerr, fmt="o-", 
+                       label=display_name, color=palette[color_idx % 10], 
+                       lw=2, markersize=6, capsize=5)
             color_idx += 1
 
         ax.set_xlabel(param_name.replace("_", " "))
