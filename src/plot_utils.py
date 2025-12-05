@@ -25,6 +25,8 @@ def get_display_name(model_name):
         return "Relative"
     elif model_name == "nanogpt_favor_100k":
         return "FAVOR+"
+    elif model_name == "nanogpt_rebased_100k":
+        return "ReBased"
     elif model_name == "nanogpt_softmax_100k":
         return "Softmax"
     elif model_name == "nanogpt_softmax_test":
@@ -33,6 +35,8 @@ def get_display_name(model_name):
         return "Pretrained"
     elif "favor" in model_name.lower():
         return "FAVOR+"
+    elif "rebased" in model_name.lower():
+        return "ReBased"
     elif "softmax" in model_name.lower():
         return "Softmax"
     elif "rela" in model_name.lower():

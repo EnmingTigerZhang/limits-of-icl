@@ -26,7 +26,7 @@ class LayerNorm(nn.Module):
     def forward(self, input):
         return F.layer_norm(input, self.weight.shape, self.weight, self.bias, 1e-5)
 
-from attentions import SoftmaxCausalSelfAttention, LocalGlobalCausalSelfAttention, MQACausalSelfAttention, FAVORCausalSelfAttention, ReLACausalSelfAttention
+from attentions import SoftmaxCausalSelfAttention, LocalGlobalCausalSelfAttention, MQACausalSelfAttention, FAVORCausalSelfAttention, ReLACausalSelfAttention, ReBasedCausalSelfAttention
 
 # A mapping from string names to the attention classes.
 # This makes it easy to add new attention mechanisms.
@@ -36,6 +36,7 @@ ATTENTION_CLASSES = {
     'mqa': MQACausalSelfAttention,
     'favor': FAVORCausalSelfAttention,
     'rela': ReLACausalSelfAttention,
+    'rebased': ReBasedCausalSelfAttention,
 }
 
 class MLP(nn.Module):

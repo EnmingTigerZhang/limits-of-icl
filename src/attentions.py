@@ -462,3 +462,84 @@ class ReLACausalSelfAttention(Attention):
         
         return y
     
+
+class ReBasedCausalSelfAttention(Attention):
+    """
+    ReBased causal self-attention using a learnable quadratic kernel
+    instead of softmax.
+
+    φ(x) = (γ * LN(x) + β)²   → non-negative feature map
+    where the parameters γ, β are learned parameters.
+    """
+    def __init__(self, config, **kwargs):
+        super().__init__(config, **kwargs)
+        assert self.n_embd % self.n_head == 0
+        self.head_dim = self.n_embd // self.n_head
+
+        # Projections
+        self.c_attn = nn.Linear(self.n_embd, 3 * self.n_embd, bias=self.use_linear_bias)
+        self.c_proj = nn.Linear(self.n_embd, self.n_embd, bias=self.use_linear_bias)
+
+        # Per-head learned kernel parameters
+        self.gamma = nn.Parameter(torch.ones(self.n_head, self.head_dim))
+        self.beta  = nn.Parameter(torch.zeros(self.n_head, self.head_dim))
+        self.eps = 1e-6
+
+        self.attn_dropout = nn.Dropout(self.dropout)
+        self.resid_dropout = nn.Dropout(self.dropout)
+
+    def _phi(self, x):
+        """
+        ReBased kernel map:
+        phi(x) = (gamma * LN(x) + beta)^2
+
+        x: (B, nh, T, head_dim)
+        returns: (B, nh, T, head_dim)
+        """
+        # LayerNorm (manual, no affine terms)
+        mean = x.mean(dim=-1, keepdim=True)
+        var = ((x - mean) ** 2).mean(dim=-1, keepdim=True)
+        x_norm = (x - mean) / (torch.sqrt(var + self.eps))
+
+        # Learned affine transform per head
+        h = self.gamma.unsqueeze(1) * x_norm + self.beta.unsqueeze(1)
+
+        return h * h  # non-negative kernel
+
+    def forward(self, x):
+        B, T, C = x.size()
+        assert C == self.n_embd
+
+        # Project to q, k, v
+        q, k, v = self.c_attn(x).split(self.n_embd, dim=2)
+
+        # Reshape into heads
+        q = q.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
+        k = k.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
+        v = v.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
+
+        v = self.attn_dropout(v)
+
+        # Apply ReBased kernel
+        phi_q = self._phi(q)
+        phi_k = self._phi(k)
+
+        # Causal prefix sums
+        kv = phi_k.unsqueeze(-1) * v.unsqueeze(-2)   # (B, nh, T, d, d_h)
+        kv_flat = kv.view(B, self.n_head, T, self.head_dim * self.head_dim)
+        S_flat = torch.cumsum(kv_flat, dim=2)
+        S = S_flat.view(B, self.n_head, T, self.head_dim, self.head_dim)
+
+        Z = torch.cumsum(phi_k, dim=2)  # (B, nh, T, d)
+
+        # Contract over head_dim
+        num = torch.einsum("bhtd,bhtde->bhte", phi_q, S)
+        den = torch.einsum("bhtd,bhtd->bht", phi_q, Z).unsqueeze(-1) + self.eps
+
+        y = num / den
+
+        # Merge heads and project out
+        y = y.transpose(1, 2).contiguous().view(B, T, C)
+        y = self.resid_dropout(self.c_proj(y))
+
+        return y
