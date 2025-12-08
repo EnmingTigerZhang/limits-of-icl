@@ -9,6 +9,32 @@ from wrapper_model import build_model
 sns.set_theme("notebook", "darkgrid")
 palette = sns.color_palette("colorblind")
 
+# Hardcoded mapping from parameter sweep keys to display titles
+PARAM_TITLE_MAP = {
+    "scaled_query_scale": "Scaling Query Vectors",
+    "opposite_quadrants_num_flipped": "Transformation to Opposite Quadrant",
+    "random_quadrants_num_constrained": "Transformation to Random Quadrant",
+    "orthogonal_train_test_num_orthogonal": "Transformation to Orthogonal Subspace",
+    "subspace_frac": "Subspace Projection Fraction",
+    "skewed_exponent": "Skewed Variance with Exponential Scaling",
+    "noisyLR_std": "Noisy Linear Regression",
+    "affineLR_std": "Affine Linear Regression",
+    "sparseLR_k": "Sparse Linear Regression",
+}
+
+# Hardcoded mapping from parameter keys to x-axis label text
+PARAM_XLABEL_MAP = {
+    "scaled_query_scale": "Scale",
+    "opposite_quadrants_num_flipped": "Number of Flipped Dimensions",
+    "random_quadrants_num_constrained": "Number of Constrained Points",
+    "orthogonal_train_test_num_orthogonal": "Number of Orthogonal Vectors",
+    "subspace_frac": "Fraction of Eigenvalues",
+    "skewed_exponent": "Eigenvalue Scaling Exponent",
+    "noisyLR_std": "Noise Standard Deviation",
+    "affineLR_std": "Bias Standard Deviation",
+    "sparseLR_k": "Sparsity Factor",
+}
+
 
 def get_display_name(model_name):
     """Extract a clean display name from model identifier, focusing on attention type."""
@@ -22,25 +48,31 @@ def get_display_name(model_name):
     elif model_name == "nanogpt_mqa_100k":
         return "MQA"
     elif model_name == "nanogpt_rela_100k":
-        return "Relative"
+        return "ReLA"
     elif model_name == "nanogpt_favor_100k":
-        return "FAVOR+"
+        return "FAVOR"
     elif model_name == "nanogpt_rebased_100k":
         return "ReBased"
     elif model_name == "nanogpt_softmax_100k":
         return "Softmax"
+    elif model_name == "nanogpt_softmax_100k_large":
+        return "Softmax (Large)"
+    elif model_name == "nanogpt_softmax_100k_small":
+        return "Softmax (Small)"
+    elif model_name == "nanogpt_softmax_100k_tiny":
+        return "Softmax (Tiny)"
     elif model_name == "nanogpt_softmax_test":
         return "Softmax"
     elif model_name == "pretrained":
         return "Pretrained"
     elif "favor" in model_name.lower():
-        return "FAVOR+"
+        return "FAVOR"
     elif "rebased" in model_name.lower():
         return "ReBased"
     elif "softmax" in model_name.lower():
         return "Softmax"
     elif "rela" in model_name.lower():
-        return "Relative"
+        return "ReLA"
     elif "mqa" in model_name.lower():
         return "MQA"
     elif "local" in model_name.lower():
@@ -193,9 +225,11 @@ def plot_param_sweep(all_metrics, models_to_plot=None):
                        lw=2, markersize=6, capsize=5)
             color_idx += 1
 
-        ax.set_xlabel(param_name.replace("_", " "))
-        ax.set_ylabel("squared error")
-        ax.set_title(f"Effect of {param_name.replace('_', ' ')}")
+        ax.set_xlabel(PARAM_XLABEL_MAP.get(param_name, param_name.replace("_", " ")))
+        ax.set_ylabel("Mean Squared Error")
+        # Use hardcoded title mapping if available; fallback to formatted key
+        display_title = PARAM_TITLE_MAP.get(param_name, f"Effect of {param_name.replace('_', ' ')}")
+        ax.set_title(display_title if display_title else f"Effect of {param_name.replace('_', ' ')}")
         ax.legend(loc="center left", bbox_to_anchor=(1, 0.5), title="Attention")
         ax.grid(True, alpha=0.3)
         fig.set_size_inches(7, 4)
