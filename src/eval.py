@@ -334,7 +334,7 @@ def build_evals(conf):
 
     # Prompt-level shifts
     for frac_val in [0.1 * i for i in range(1, 10+1, 1)]:
-        evaluation_kwargs[f"subspace_frac={frac_val}"] = {
+        evaluation_kwargs[f"subspace_dim={frac_val}"] = {
             "prompting_strategy": "subspace",
             "prompting_strategy_kwargs": {"frac": frac_val},
         }

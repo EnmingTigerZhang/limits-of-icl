@@ -6119,7 +6119,7 @@
             ]
         }
     },
-    "subspace_frac=0.1": {
+    "subspace_dim=0.1": {
         "nanogpt_local_100k_15": {
             "mean": [
                 18.029577255249023
@@ -6191,7 +6191,7 @@
             ]
         }
     },
-    "subspace_frac=0.2": {
+    "subspace_dim=0.2": {
         "nanogpt_local_100k_15": {
             "mean": [
                 20.904268264770508
@@ -6263,7 +6263,7 @@
             ]
         }
     },
-    "subspace_frac=0.30000000000000004": {
+    "subspace_dim=0.30000000000000004": {
         "nanogpt_local_100k_15": {
             "mean": [
                 12.975912094116211
@@ -6335,7 +6335,7 @@
             ]
         }
     },
-    "subspace_frac=0.4": {
+    "subspace_dim=0.4": {
         "nanogpt_local_100k_15": {
             "mean": [
                 10.667715072631836
@@ -6407,7 +6407,7 @@
             ]
         }
     },
-    "subspace_frac=0.5": {
+    "subspace_dim=0.5": {
         "nanogpt_local_100k_15": {
             "mean": [
                 5.228966236114502
@@ -6479,7 +6479,7 @@
             ]
         }
     },
-    "subspace_frac=0.6000000000000001": {
+    "subspace_dim=0.6000000000000001": {
         "nanogpt_local_100k_15": {
             "mean": [
                 4.540320873260498
@@ -6551,7 +6551,7 @@
             ]
         }
     },
-    "subspace_frac=0.7000000000000001": {
+    "subspace_dim=0.7000000000000001": {
         "nanogpt_local_100k_15": {
             "mean": [
                 4.7538743019104
@@ -6623,7 +6623,7 @@
             ]
         }
     },
-    "subspace_frac=0.8": {
+    "subspace_dim=0.8": {
         "nanogpt_local_100k_15": {
             "mean": [
                 4.73386812210083
@@ -6695,7 +6695,7 @@
             ]
         }
     },
-    "subspace_frac=0.9": {
+    "subspace_dim=0.9": {
         "nanogpt_local_100k_15": {
             "mean": [
                 5.051224708557129
@@ -6767,7 +6767,7 @@
             ]
         }
     },
-    "subspace_frac=1.0": {
+    "subspace_dim=1.0": {
         "nanogpt_local_100k_15": {
             "mean": [
                 5.514173984527588
