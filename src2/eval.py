@@ -183,7 +183,7 @@ def gen_overlapping_train_test(data_sampler, n_points, b_size): # TODO: This may
 def gen_subspace(data_sampler, n_points, b_size, num_dim=1):
     xs = data_sampler.sample_xs(n_points, b_size)
     n_dims = xs.shape[2]
-    k = max(1, int(num_dim))
+    k = max(1, int(n_dims - num_dim))
     eigenvals = torch.zeros(n_dims)
     eigenvals[:k] = 1
     scale = sample_transformation(eigenvals, normalize=True)
@@ -333,7 +333,7 @@ def build_evals(conf):
     }
 
     # Prompt-level shifts
-    for num_dim in [i for i in range(1, n_dims + 1, 1)]:
+    for num_dim in [i for i in range(0, n_dims, 1)]:
         evaluation_kwargs[f"subspace_dim={num_dim}"] = {
             "prompting_strategy": "subspace",
             "prompting_strategy_kwargs": {"num_dim": num_dim},
