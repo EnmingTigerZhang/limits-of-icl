@@ -1,0 +1,32 @@
+out_dir: /home/kenzhengjk/182/limits-of-icl/models/nanogpt_softmax_100k
+test_run: false
+
+model:
+  family: nanogpt
+  attention_type: local_global
+  attention_kwargs: {'local_window_size': 15, 'global_attn_indices': [20, 40]}
+  n_dims: 20
+  n_positions: 41
+  n_embd: 256
+  n_layer: 12
+  n_head: 8
+
+training:
+  task: linear_regression
+  task_kwargs: {}
+  data: gaussian
+  batch_size: 64
+  learning_rate: 0.0001
+  train_steps: 100000
+  save_every_steps: 10000
+  curriculum:
+    dims:
+      start: 5
+      end: 20
+      inc: 1
+      interval: 2000
+    points:
+      start: 11
+      end: 41
+      inc: 2
+      interval: 2000
