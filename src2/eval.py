@@ -183,7 +183,7 @@ def gen_overlapping_train_test(data_sampler, n_points, b_size): # TODO: This may
 def gen_subspace(data_sampler, n_points, b_size, frac=0.5):
     xs = data_sampler.sample_xs(n_points, b_size)
     n_dims = xs.shape[2]
-    k = max(1, int(frac * n_dims))
+    k = max(1, int((1 - frac) * n_dims))
     eigenvals = torch.zeros(n_dims)
     eigenvals[:k] = 1
     scale = sample_transformation(eigenvals, normalize=True)
