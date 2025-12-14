@@ -28,7 +28,7 @@ PARAM_XLABEL_MAP = {
     "opposite_quadrants_num_flipped": "Number of Flipped Dimensions",
     "random_quadrants_num_constrained": "Number of Constrained Points",
     "orthogonal_train_test_num_orthogonal": "Number of Orthogonal Vectors",
-    "subspace_dim": "Number of Dimensions in Subspace",
+    "subspace_dim": "Number of Zeroed Eigenvalues",
     "skewed_exponent": "Eigenvalue Scaling Exponent",
     "noisyLR_std": "Noise Standard Deviation",
     "affineLR_std": "Bias Standard Deviation",
