@@ -1,4 +1,4 @@
-out_dir: /home/kenzhengjk/182/limits-of-icl/models/nanogpt_softmax_100k
+out_dir: ../models/nanogpt_softmax_100k
 test_run: false
 
 model:
