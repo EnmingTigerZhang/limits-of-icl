@@ -40,11 +40,11 @@ def get_display_name(model_name):
     """Extract a clean display name from model identifier, focusing on attention type."""
     # Handle specific run_ids explicitly
     if model_name == "nanogpt_local_100k_5":
-        return "Local ($l_{window}$=5)"
+        return "Local ($\ell_{window}$=5)"
     elif model_name == "nanogpt_local_100k_8":
-        return "Local ($l_{window}$=8)"
+        return "Local ($\ell_{window}$=8)"
     elif model_name == "nanogpt_local_100k_15":
-        return "Local ($l_{window}$=15)"
+        return "Local ($\ell_{window}$=15)"
     elif model_name == "nanogpt_mqa_100k":
         return "MQA"
     elif model_name == "nanogpt_rela_100k":
